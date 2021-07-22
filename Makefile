@@ -8,9 +8,13 @@ $(eval current_dir=$(shell pwd))
 
 ZK_FILEPATH := https://apache.mirror.digitalpacific.com.au/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz
 ZK_SHA_FILEPATH := https://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz.sha512
-DEBEZIUM_FILEPATH := https://repo1.maven.org/maven2/io/debezium/debezium-connector-src/mysql/1.5.0.Final/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz
+DEBEZIUM_FILEPATH := https://repo1.maven.org/maven2/io/debezium/debezium-connector-src/sql/mysql/1.5.0.Final/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz
 KAFKA_FILEPATH := https://ftp.cixug.es/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
+SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar
+SNOWFLAKE_KAFKA_CONNECTOR_MD5_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar.md5
 KAFKA_PLUGINS_DIR := ${current_dir}/bin/kafka_plugins
+# standardised Snowflake SnowSQL query format / options
+SNOWSQL_QUERY=snowsql -c ${SNOWFLAKE_CONN_PROFILE} -o friendly=false -o header=false -o timing=false
 
 deps:
 	$(info [+] Download the relevant dependencies)
@@ -28,6 +32,14 @@ deps:
 	@wget ${DEBEZIUM_FILEPATH} -P downloads/
 	# download kafka
 	@wget ${KAFKA_FILEPATH} -P downloads/
+	# download the snowflake-kafka connector and corresponding MD5 file
+	@wget ${SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH} -P downloads/
+	@wget ${SNOWFLAKE_KAFKA_CONNECTOR_MD5_FILEPATH} -P downloads/
+	# donwload Bouncy Castle plugin for encrypted private key authentication
+	@wget https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/1.0.1/bc-fips-1.0.1.jar -P downloads/
+	@wget https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/1.0.1/bc-fips-1.0.1.jar.md5 -P downloads/
+	@wget https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-fips/1.0.3/bcpkix-fips-1.0.3.jar -P downloads/
+	@wget https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-fips/1.0.3/bcpkix-fips-1.0.3.jar.md5 -P downloads/
 
 install:
 	$(info [+] Install the relevant dependencies)
@@ -52,18 +64,22 @@ start_kafka: #do this in a seperate terminal session
 
 prep_mysql_db:
 	$(info [+] Prepare the MySQL DB / server)
-	#@mysql < src/mysql/create_db.sql
-	#@mysql --database="snowflake_source" < src/mysql/create_and_populate_animals_tbl.sql
-	## create a MySQL 'replication' user, using the env var ${DEMO_PASS} as the password)
-	## @cat src/mysql/create_replication_user.sql | sed 's/@Pass/${DEMO_PASS}/' | mysql --database="snowflake_source"
-	#@echo ""
-	## verify that logging is enabled on the server
-	#@mysql --database="snowflake_source" < src/mysql/verify_logging_enabled.sql
-	#@echo ""
-	## mysql --database="snowflake_source" < src/mysql/set_tz.sql
-	## add 2 additional kafka config options
+	@mysql < src/sql/mysql/create_db.sql
+	@mysql --database="snowflake_source" < src/sql/mysql/create_and_populate_animals_tbl.sql
+	# create a MySQL 'replication' user, using the env var ${DEMO_PASS} as the password)
+	# @cat src/sql/mysql/create_replication_user.sql | sed 's/@Pass/${DEMO_PASS}/' | mysql --database="snowflake_source"
+	@echo ""
+	# verify that logging is enabled on the server
+	@mysql --database="snowflake_source" < src/sql/mysql/verify_logging_enabled.sql
+	@echo ""
+	# add 2 additional kafka config options
 	@cat src/kafka_settings/connect-standalone.properties | sed \ 's+@CWD+${KAFKA_PLUGINS_DIR}+' >> bin/kafka/config/connect-standalone.properties
-	#@cat src/kafka_settings/mysql-debezium.properties | sed 's/MyPass/${DEMO_PASS}/' > bin/kafka/config/mysql-debezium.properties
+	@cat src/kafka_settings/mysql-debezium.properties | sed 's/MyPass/${DEMO_PASS}/' > bin/kafka/config/mysql-debezium.properties
+
+prep_snowflake:
+	$(info [+] Prepare Snowflake target)
+	@${SNOWSQL_QUERY} -f src/sql/snowflake/create_scaffolding.sql
+	@${SNOWSQL_QUERY} -f src/sql/snowflake/create_roles.sql --variable PASS=${DEMO_PASS}
 
 launch_debezium_connector:
 	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone.properties ./bin/kafka/config/mysql-debezium.properties > debezium_connector_`date "+%F_%H-%M"`.log 2>&1 &

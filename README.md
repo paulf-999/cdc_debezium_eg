@@ -80,3 +80,4 @@ commands to run if specific messages are encountered
 ## Sources
 
 [replicating-mysql-to-snowflake-with-kafka-and-debezium-part-one-data-extraction](https://blog.pythian.com/replicating-mysql-to-snowflake-with-kafka-and-debezium-part-one-data-extraction/)
+[replicating-mysql-to-snowflake-with-kafka-and-debezium-part-two-data-ingestion/](https://blog.pythian.com/replicating-mysql-to-snowflake-with-kafka-and-debezium-part-two-data-ingestion/)
