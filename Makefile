@@ -12,7 +12,7 @@ DEBEZIUM_FILEPATH := https://repo1.maven.org/maven2/io/debezium/debezium-connect
 KAFKA_FILEPATH := https://ftp.cixug.es/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
 SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar
 SNOWFLAKE_KAFKA_CONNECTOR_MD5_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar.md5
-KAFKA_PLUGINS_DIR := ${CURRENT_DIR}/bin/kafka/config
+KAFKA_PLUGINS_DIR := ${CURRENT_DIR}/bin/kafka/libs
 # standardised Snowflake SnowSQL query format / options
 SNOWSQL_QUERY=snowsql -c ${SNOWFLAKE_CONN_PROFILE} -o friendly=false -o header=false -o timing=false
 
