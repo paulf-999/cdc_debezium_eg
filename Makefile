@@ -4,7 +4,7 @@ SHELL = /bin/sh
 
 installations: deps install clean
 
-$(eval current_dir=$(shell pwd))
+$(eval CURRENT_DIR=$(shell pwd))
 
 ZK_FILEPATH := https://apache.mirror.digitalpacific.com.au/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz
 ZK_SHA_FILEPATH := https://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz.sha512
@@ -12,7 +12,7 @@ DEBEZIUM_FILEPATH := https://repo1.maven.org/maven2/io/debezium/debezium-connect
 KAFKA_FILEPATH := https://ftp.cixug.es/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
 SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar
 SNOWFLAKE_KAFKA_CONNECTOR_MD5_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar.md5
-KAFKA_PLUGINS_DIR := ${current_dir}/bin/kafka_plugins
+KAFKA_PLUGINS_DIR := ${CURRENT_DIR}/bin/kafka/config
 # standardised Snowflake SnowSQL query format / options
 SNOWSQL_QUERY=snowsql -c ${SNOWFLAKE_CONN_PROFILE} -o friendly=false -o header=false -o timing=false
 
@@ -33,10 +33,6 @@ deps:
 	# download kafka
 	@wget ${KAFKA_FILEPATH} -P downloads/
 	# download the snowflake-kafka connector
-	@wget ${SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH} -P ${KAFKA_PLUGINS_DIR}
-	# donwload Bouncy Castle plugin for encrypted private key authentication
-	@wget https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/1.0.1/bc-fips-1.0.1.jar -P ${KAFKA_PLUGINS_DIR}
-	@wget https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-fips/1.0.3/bcpkix-fips-1.0.3.jar -P ${KAFKA_PLUGINS_DIR}
 
 install:
 	$(info [+] Install the relevant dependencies)
@@ -44,8 +40,14 @@ install:
 	@mkdir -p bin/zookeeper && tar xzf downloads/apache-zookeeper-3.7.0-bin.tar.gz -C bin/zookeeper --strip-components 1
 	@mv bin/zookeeper/conf/zoo_sample.cfg bin/zookeeper/conf/zoo.cfg
 	@sudo mkdir -p /var/lib/zookeeper
+	# configure and install kafka
 	@mkdir -p bin/kafka && tar xzf downloads/kafka_2.13-2.8.0.tgz -C bin/kafka --strip-components 1
+	# download required kafka plugins
+	@wget ${SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH} -P ${KAFKA_PLUGINS_DIR}
 	@tar xzf downloads/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz --directory ${KAFKA_PLUGINS_DIR}
+	# donwload Bouncy Castle plugin for encrypted private key authentication
+	@wget https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/1.0.1/bc-fips-1.0.1.jar -P ${KAFKA_PLUGINS_DIR}
+	@wget https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-fips/1.0.3/bcpkix-fips-1.0.3.jar -P ${KAFKA_PLUGINS_DIR}
 	# Set the timezone to UTC with homebrew installed mysql
 	@cat src/kafka_settings/mysql_tz.txt >> /usr/local/etc/my.cnf
 	# restart mysql server, for timezone change to take effect
