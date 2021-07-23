@@ -1,2 +1,5 @@
 bin/zookeeper/
 bin/kafka/
+*.log
+downloads/
+rsa_key.*
