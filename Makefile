@@ -78,7 +78,7 @@ add_kafka_settings:
 	@cat src/kafka_settings/mysql-debezium.properties | sed 's/MyPass/${DEMO_PASS}/' > bin/kafka/config/mysql-debezium.properties
 
 launch_debezium_connector:
-	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone.properties ./bin/kafka/config/mysql-debezium.properties > debezium_connector_`date "+%F_%H-%M"`.log 2>&1 &
+	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone.properties ./bin/kafka/config/mysql-debezium.properties > log/debezium_connector_`date "+%F_%H-%M"`.log 2>&1 &
 
 prep_snowflake:
 	$(info [+] Prepare Snowflake target)
@@ -105,7 +105,7 @@ populate_snowflake_connector:
 	echo "rest.port=8084" >> bin/kafka/config/connect-standalone-write.properties
 
 collate_logging:
-	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone-write.properties ./bin/kafka/config/snowflake-connector-animals.properties > snowflake_connector_`date "+%F_%H-%M"`.log 2>&1 &
+	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone-write.properties ./bin/kafka/config/snowflake-connector-animals.properties > log/snowflake_connector_`date "+%F_%H-%M"`.log 2>&1 &
 
 find_and_kill_port_process:
 	lsof -i tcp:8083
