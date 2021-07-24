@@ -44,11 +44,11 @@ There are a few prerequisite libraries / configuration / other required for this
 So before you begin, ensure you have met the following requirements:
 
 * (Ideally) you're using a Mac or Linux
-* [JDK 1.8 or higher](https://www.oracle.com/au/java/technologies/javase/javase-jdk8-downloads.html)
 * [Homebrew package manager](https://brew.sh/)
-* [Wget](https://www.gnu.org/software/wget/)
-* [SnowSQL](https://docs.snowflake.com/en/user-guide/snowsql.html)
+* [JDK 1.8 or higher](https://www.oracle.com/au/java/technologies/javase/javase-jdk8-downloads.html) (can install using brew, `brew install java`)
+* [Wget](https://www.gnu.org/software/wget/) (can install using brew, `brew install wget`)
 * A Snowflake account with `ACCOUNTADMIN` privileges
+* [SnowSQL](https://docs.snowflake.com/en/user-guide/snowsql.html)
 
 ### Installation
 
