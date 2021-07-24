@@ -2,8 +2,6 @@
 
 Example project showing how to use Debezium to carry out CDC into a Snowflake Data Warehouse.
 
-Note: the code works, but there's some slight housekeeping to do, around orchestrating exectution.
-
 ---
 
 ## Contents
