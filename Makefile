@@ -1,17 +1,19 @@
 SHELL = /bin/sh
 
-# default: deps install [X, Y, Z...] clean
-
 installations: deps install clean
+
+setup: prep_mysql_db prep_snowflake add_kafka_settings gen_keys populate_snowflake_connector
+
+run: start_zk start_kafka start_debezium_mysql_connector start_snowflake_kafka_connector
 
 $(eval CURRENT_DIR=$(shell pwd))
 
 ZK_FILEPATH := https://apache.mirror.digitalpacific.com.au/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz
-ZK_SHA_FILEPATH := https://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz.sha512
-DEBEZIUM_FILEPATH := https://repo1.maven.org/maven2/io/debezium/debezium-connector-mysql/1.5.0.Final/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz
 KAFKA_FILEPATH := https://ftp.cixug.es/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
+DEBEZIUM_FILEPATH := https://repo1.maven.org/maven2/io/debezium/debezium-connector-mysql/1.5.0.Final/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz
 SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar
-SNOWFLAKE_KAFKA_CONNECTOR_MD5_FILEPATH := https://repo1.maven.org/maven2/com/snowflake/snowflake-kafka-connector/1.5.2/snowflake-kafka-connector-1.5.2.jar.md5
+BOUNCY_CASTLE_LIB1 := https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/1.0.1/bc-fips-1.0.1.jar
+BOUNCY_CASTLE_LIB2 := https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-fips/1.0.3/bcpkix-fips-1.0.3.jar
 KAFKA_PLUGINS_DIR := ${CURRENT_DIR}/bin/kafka/libs
 # standardised Snowflake SnowSQL query format / options
 SNOWSQL_QUERY=snowsql -c ${SNOWFLAKE_CONN_PROFILE} -o friendly=false -o header=false -o timing=false
@@ -20,14 +22,8 @@ deps:
 	$(info [+] Download the relevant dependencies)
 	@brew install java
 	@brew install wget
-	@brew install coreutils
-	# if you have any issues with sha512, uncomment the line below
-	# sudo ln -s /usr/local/bin/gsha512sum /usr/local/bin/sha512sum
 	# download zookeeper (zk)
 	@wget ${ZK_FILEPATH} -P downloads/
-	# download zk sha checksum file
-	@wget ${ZK_SHA_FILEPATH} -P downloads/
-	@sha512sum downloads/apache-zookeeper-3.7.0-bin.tar.gz
 	# download debezium connector
 	@wget ${DEBEZIUM_FILEPATH} -P downloads/
 	# download kafka
@@ -46,8 +42,8 @@ install:
 	@wget ${SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH} -P ${KAFKA_PLUGINS_DIR}
 	@tar xzf downloads/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz --directory ${KAFKA_PLUGINS_DIR}
 	# donwload Bouncy Castle plugin for encrypted private key authentication
-	@wget https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/1.0.1/bc-fips-1.0.1.jar -P ${KAFKA_PLUGINS_DIR}
-	@wget https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-fips/1.0.3/bcpkix-fips-1.0.3.jar -P ${KAFKA_PLUGINS_DIR}
+	@wget ${BOUNCY_CASTLE_LIB1} -P ${KAFKA_PLUGINS_DIR}
+	@wget ${BOUNCY_CASTLE_LIB2} -P ${KAFKA_PLUGINS_DIR}
 	# Set the timezone to UTC with homebrew installed mysql
 	@cat src/kafka_settings/mysql_tz.txt >> /usr/local/etc/my.cnf
 	# restart mysql server, for timezone change to take effect
@@ -59,7 +55,7 @@ start_zk:
 
 start_kafka: #do this in a seperate terminal session
 	$(info [+] instructions followed from: https://kafka.apache.org/quickstart)
-	@bin/kafka/bin/kafka-server-start.sh bin/kafka/config/server.properties
+	@bin/kafka/bin/kafka-server-start.sh -daemon bin/kafka/config/server.properties
 
 prep_mysql_db:
 	$(info [+] Prepare the MySQL DB / server)
@@ -77,15 +73,10 @@ add_kafka_settings:
 	@cat src/kafka_settings/connect-standalone.properties | sed \ 's~@CWD~${KAFKA_PLUGINS_DIR}~' >> bin/kafka/config/connect-standalone.properties
 	@cat src/kafka_settings/mysql-debezium.properties | sed 's/MyPass/${DEMO_PASS}/' > bin/kafka/config/mysql-debezium.properties
 
-launch_debezium_connector:
-	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone.properties ./bin/kafka/config/mysql-debezium.properties > log/debezium_connector_`date "+%F_%H-%M"`.log 2>&1 &
-
 prep_snowflake:
 	$(info [+] Prepare Snowflake target)
 	@${SNOWSQL_QUERY} -f src/sql/snowflake/create_scaffolding.sql
 	@${SNOWSQL_QUERY} -f src/sql/snowflake/create_roles.sql --variable PASS=${DEMO_PASS}
-
-generate_keys_and_populate_snowflake_connector: gen_keys populate_snowflake_connector
 
 gen_keys:
 	# generate encrpyted private key
@@ -104,14 +95,18 @@ populate_snowflake_connector:
 	cp bin/kafka/config/connect-standalone.properties bin/kafka/config/connect-standalone-write.properties
 	echo "rest.port=8084" >> bin/kafka/config/connect-standalone-write.properties
 
-collate_logging:
-	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone-write.properties ./bin/kafka/config/snowflake-connector-animals.properties > log/snowflake_connector_`date "+%F_%H-%M"`.log 2>&1 &
+start_debezium_mysql_connector:
+	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone.properties ./bin/kafka/config/mysql-debezium.properties > log/debezium_connector_`date "+%F_%H-%M"`.log 2>&1 &
 
-find_and_kill_port_process:
-	lsof -i tcp:8083
-	#kill -9 73260 #pid
+start_snowflake_kafka_connector:
+	nohup ./bin/kafka/bin/connect-standalone.sh ./bin/kafka/config/connect-standalone-write.properties ./bin/kafka/config/snowflake-connector-animals.properties > log/snowflake_connector_`date "+%F_%H-%M"`.log 2>&1 &
 
 clean:
 	$(info [+] remove compression downloads)
 	rm downloads/*.gz
 	rm downloads/*.tgz
+
+find_and_kill_port_process: #just used during dev, in case a port is already being used
+	$(info [+] remove compression downloads)
+	lsof -i tcp:8083
+	#kill -9 73260 #pid
