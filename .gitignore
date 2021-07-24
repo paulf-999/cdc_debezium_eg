@@ -1,5 +1,4 @@
 bin/zookeeper/
 bin/kafka/
-*.log
-downloads/
+tmp/
 rsa_key.*

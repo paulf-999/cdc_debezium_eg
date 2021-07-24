@@ -23,24 +23,24 @@ deps:
 	@brew install java
 	@brew install wget
 	# download zookeeper (zk)
-	@wget ${ZK_FILEPATH} -P downloads/
+	@wget ${ZK_FILEPATH} -P tmp/
 	# download debezium connector
-	@wget ${DEBEZIUM_FILEPATH} -P downloads/
+	@wget ${DEBEZIUM_FILEPATH} -P tmp/
 	# download kafka
-	@wget ${KAFKA_FILEPATH} -P downloads/
+	@wget ${KAFKA_FILEPATH} -P tmp/
 	# download the snowflake-kafka connector
 
 install:
 	$(info [+] Install the relevant dependencies)
 	# configure and install zookeeper
-	@mkdir -p bin/zookeeper && tar xzf downloads/apache-zookeeper-3.7.0-bin.tar.gz -C bin/zookeeper --strip-components 1
+	@mkdir -p bin/zookeeper && tar xzf tmp/apache-zookeeper-3.7.0-bin.tar.gz -C bin/zookeeper --strip-components 1
 	@mv bin/zookeeper/conf/zoo_sample.cfg bin/zookeeper/conf/zoo.cfg
 	@sudo mkdir -p /var/lib/zookeeper
 	# configure and install kafka
-	@mkdir -p bin/kafka && tar xzf downloads/kafka_2.13-2.8.0.tgz -C bin/kafka --strip-components 1
+	@mkdir -p bin/kafka && tar xzf tmp/kafka_2.13-2.8.0.tgz -C bin/kafka --strip-components 1
 	# download required kafka plugins
 	@wget ${SNOWFLAKE_KAFKA_CONNECTOR_FILEPATH} -P ${KAFKA_PLUGINS_DIR}
-	@tar xzf downloads/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz --directory ${KAFKA_PLUGINS_DIR}
+	@tar xzf tmp/debezium-connector-mysql-1.5.0.Final-plugin.tar.gz --directory ${KAFKA_PLUGINS_DIR}
 	# donwload Bouncy Castle plugin for encrypted private key authentication
 	@wget ${BOUNCY_CASTLE_LIB1} -P ${KAFKA_PLUGINS_DIR}
 	@wget ${BOUNCY_CASTLE_LIB2} -P ${KAFKA_PLUGINS_DIR}
@@ -103,8 +103,8 @@ start_snowflake_kafka_connector:
 
 clean:
 	$(info [+] remove compression downloads)
-	rm downloads/*.gz
-	rm downloads/*.tgz
+	rm tmp/*.gz
+	rm tmp/*.tgz
 
 find_and_kill_port_process: #just used during dev, in case a port is already being used
 	$(info [+] remove compression downloads)
