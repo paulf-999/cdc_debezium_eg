@@ -107,4 +107,3 @@ This project has come about from following the notes described in the two blog p
 * [replicating-mysql-to-snowflake-with-kafka-and-debezium-part-two-data-ingestion/](https://blog.pythian.com/replicating-mysql-to-snowflake-with-kafka-and-debezium-part-two-data-ingestion/)
 
 In addition, Snowflake's instructions for [installing and configuring a Kafka connector](https://docs.snowflake.com/en/user-guide/kafka-connector-install.html#download-the-kafka-connector-files) were followed, to help provide some context to the blog post. Particularly with regard to the information around the prerequisite library (`Bouncy Castle`) for the Snowflake Kafka cluster.
->>>>>>> c6c04c087da94114d3427ef7b08d5f0c81e81cc0
